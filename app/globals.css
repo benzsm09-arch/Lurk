@@ -1,0 +1,60 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --surface-canvas: #fff7f5;
+    --surface-card: rgba(255, 255, 255, 0.86);
+    --ink-primary: #191116;
+    --ink-muted: #64535c;
+  }
+
+  .dark {
+    --surface-canvas: #0b080d;
+    --surface-card: rgba(24, 18, 28, 0.82);
+    --ink-primary: #f9f5f7;
+    --ink-muted: #a696a1;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  }
+
+  .font-mono-tabular {
+    font-family: var(--font-jetbrains), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .font-script {
+    font-family: var(--font-script), cursive;
+  }
+}
+
+/* Custom subtle glassmorphism and sunset gradient utilities */
+.whisper-gradient {
+  background: linear-gradient(135deg, #ff2e63 0%, #ff5a4e 52%, #ff9233 100%);
+}
+
+.whisper-gradient-text {
+  background: linear-gradient(135deg, #ff2e63 0%, #ff5a4e 52%, #ff9233 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.whisper-glow {
+  box-shadow: 0 12px 32px -8px rgba(255, 46, 99, 0.45), 0 4px 12px -4px rgba(255, 146, 51, 0.3);
+}
+
+.whisper-glow:hover {
+  box-shadow: 0 16px 36px -6px rgba(255, 46, 99, 0.55), 0 6px 16px -4px rgba(255, 146, 51, 0.4);
+}

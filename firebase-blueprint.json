@@ -1,0 +1,195 @@
+{
+  "entities": {
+    "PublicUser": {
+      "title": "PublicUser",
+      "description": "Public, non-PII user directory card used to discover friends and display Guess Who options.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the user."
+        },
+        "handle": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32,
+          "description": "Public @handle for WhisperLink."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Display name shown on profile cards and Guess Who quiz options."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000,
+          "description": "Profile avatar URL or generated SVG data URI."
+        },
+        "status": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80,
+          "description": "Short status line on the public card."
+        },
+        "discoverable": {
+          "type": "boolean",
+          "description": "Whether the user appears in the friend discovery directory."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the public profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the public profile was last updated."
+        }
+      },
+      "required": [
+        "uid",
+        "handle",
+        "displayName",
+        "avatarUrl",
+        "status",
+        "discoverable",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PrivateUser": {
+      "title": "PrivateUser",
+      "description": "Owner-only private user record isolating email and personal metadata.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the account owner."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "description": "Verified Google email address (strictly owner-only)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the private user doc was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the private user doc was updated."
+        }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "Friendship": {
+      "title": "Friendship",
+      "description": "Friend request and accepted friendship edge between two WhisperLink users.",
+      "type": "object",
+      "properties": {
+        "participants": {
+          "type": "array",
+          "description": "Sorted two-element array of participant UIDs [uidA, uidB]."
+        },
+        "requesterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the user who initiated the friend request."
+        },
+        "recipientId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the user receiving the friend request."
+        },
+        "requesterHandle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "requesterName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "requesterAvatar": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        },
+        "recipientHandle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "recipientName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "recipientAvatar": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "declined"],
+          "description": "Lifecycle status of the friend relationship."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last-updated timestamp."
+        }
+      },
+      "required": [
+        "participants",
+        "requesterId",
+        "recipientId",
+        "requesterHandle",
+        "requesterName",
+        "requesterAvatar",
+        "recipientHandle",
+        "recipientName",
+        "recipientAvatar",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/publicUsers/{userId}": {
+      "schema": { "$ref": "#/entities/PublicUser" },
+      "description": "Public directory profiles without PII for friend search and Guess Who selection."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/PrivateUser" },
+      "description": "Private owner-only user records holding verified email PII."
+    },
+    "/friendships/{friendshipId}": {
+      "schema": { "$ref": "#/entities/Friendship" },
+      "description": "Canonical friend request and accepted friendship edges keyed by sorted participant UIDs."
+    }
+  }
+}

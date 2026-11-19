@@ -1,0 +1,209 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function canonicalFriendshipId(uidA, uidB) {
+      return uidA < uidB ? (uidA + '__' + uidB) : (uidB + '__' + uidA);
+    }
+
+    function isValidPublicUser(data) {
+      return data.keys().hasAll([
+          'uid',
+          'handle',
+          'displayName',
+          'avatarUrl',
+          'status',
+          'discoverable',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid',
+          'handle',
+          'displayName',
+          'avatarUrl',
+          'status',
+          'discoverable',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 32
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 40
+        && data.avatarUrl is string && data.avatarUrl.size() >= 1 && data.avatarUrl.size() <= 20000
+        && data.status is string && data.status.size() <= 80
+        && data.discoverable is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPrivateUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFriendship(data) {
+      return data.keys().hasAll([
+          'participants',
+          'requesterId',
+          'recipientId',
+          'requesterHandle',
+          'requesterName',
+          'requesterAvatar',
+          'recipientHandle',
+          'recipientName',
+          'recipientAvatar',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'participants',
+          'requesterId',
+          'recipientId',
+          'requesterHandle',
+          'requesterName',
+          'requesterAvatar',
+          'recipientHandle',
+          'recipientName',
+          'recipientAvatar',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.participants is list
+        && data.participants.size() == 2
+        && data.participants[0] is string
+        && data.participants[1] is string
+        && isValidId(data.requesterId)
+        && isValidId(data.recipientId)
+        && data.requesterId != data.recipientId
+        && data.requesterId in data.participants
+        && data.recipientId in data.participants
+        && data.requesterHandle is string && data.requesterHandle.size() >= 1 && data.requesterHandle.size() <= 32
+        && data.requesterName is string && data.requesterName.size() >= 1 && data.requesterName.size() <= 40
+        && data.requesterAvatar is string && data.requesterAvatar.size() >= 1 && data.requesterAvatar.size() <= 20000
+        && data.recipientHandle is string && data.recipientHandle.size() >= 1 && data.recipientHandle.size() <= 32
+        && data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 40
+        && data.recipientAvatar is string && data.recipientAvatar.size() >= 1 && data.recipientAvatar.size() <= 20000
+        && data.status in ['pending', 'accepted', 'declined']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /publicUsers/{userId} {
+      allow get: if isEmailVerified()
+        && isValidId(userId)
+        && (userId == request.auth.uid || resource.data.discoverable == true);
+      allow list: if isEmailVerified() && resource.data.discoverable == true;
+      allow create: if isEmailVerified()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidPublicUser(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isEmailVerified()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidPublicUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'handle',
+          'displayName',
+          'avatarUrl',
+          'status',
+          'discoverable',
+          'updatedAt'
+        ])
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isEmailVerified()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidPrivateUser(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isEmailVerified()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidPrivateUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'updatedAt'])
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /friendships/{friendshipId} {
+      allow get: if isEmailVerified()
+        && isValidId(friendshipId)
+        && request.auth.uid in existing().participants;
+      allow list: if isEmailVerified()
+        && request.auth.uid in resource.data.participants;
+      allow create: if isEmailVerified()
+        && isValidId(friendshipId)
+        && isValidFriendship(incoming())
+        && incoming().requesterId == request.auth.uid
+        && incoming().status == 'pending'
+        && friendshipId == canonicalFriendshipId(incoming().requesterId, incoming().recipientId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/publicUsers/$(incoming().recipientId));
+      allow update: if isEmailVerified()
+        && isValidId(friendshipId)
+        && isValidFriendship(incoming())
+        && existing().status == 'pending'
+        && existing().recipientId == request.auth.uid
+        && incoming().status in ['accepted', 'declined']
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && incoming().requesterId == existing().requesterId
+        && incoming().recipientId == existing().recipientId
+        && incoming().participants == existing().participants
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isEmailVerified()
+        && isValidId(friendshipId)
+        && request.auth.uid in existing().participants;
+    }
+  }
+}

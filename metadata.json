@@ -1,0 +1,6 @@
+{
+  "name": "WhisperLink",
+  "description": "Anonymous Q&A and interactive confession games with Guess Who quizzes, Truth or Dare, Clue Drops, and Story Reply Cards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
